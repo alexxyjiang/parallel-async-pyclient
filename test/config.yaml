@@ -1,0 +1,9 @@
+major:
+  minor:
+    float: 1.024
+    int: -2
+    list:
+    - 2
+    - 1
+    - 3
+    str: '2024'
