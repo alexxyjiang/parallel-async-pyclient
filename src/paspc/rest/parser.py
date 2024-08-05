@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # generic rest http response parser interface
+import itertools
 from abc import ABC, abstractmethod
 from aiohttp.typedefs import CIMultiDictProxy
 
@@ -15,19 +16,20 @@ class RestfulParser(ABC):
         return cls.__name__
 
     @classmethod
-    @abstractmethod
-    def support_status(cls) -> set:
-        return {200}
+    def support_status(cls) -> list:
+        return [200]
 
     @classmethod
-    @abstractmethod
     def support_parse_headers(cls) -> bool:
         return False
 
     @classmethod
-    @abstractmethod
-    def support_content_type(cls) -> set:
-        return set()
+    def support_content_type(cls) -> list:
+        return []
+
+    @classmethod
+    def support_charset(cls) -> list:
+        return ['utf-8']
 
     @abstractmethod
     def update_by_status(self, status: int):
@@ -45,7 +47,13 @@ class RestfulParser(ABC):
         self.update_by_status(status)
         if self.support_parse_headers():
             self.update_by_headers(headers)
-        if 'content-type' in headers and headers['content-type'] in self.support_content_type():
+        if 'content-type' not in headers:
             return self.parse_body(body, **kwargs)
         else:
-            return {}
+            supported_content_types = self.support_content_type() + [
+                f'{t}; charset={c}' for c, t in itertools.product(self.support_charset(), self.support_content_type())
+            ]
+            if headers['content-type'] in supported_content_types:
+                return self.parse_body(body, **kwargs)
+            else:
+                return {}
