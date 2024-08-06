@@ -10,10 +10,6 @@ from aiohttp.typedefs import CIMultiDictProxy
 
 class RestfulParser(ABC):
 
-    @abstractmethod
-    def __init__(self, **kwargs):
-        pass
-
     @classmethod
     def name(cls) -> str:
         return cls.__name__
@@ -30,28 +26,27 @@ class RestfulParser(ABC):
     def charset_supported(cls) -> list:
         return []
 
+    @classmethod
     @abstractmethod
-    def do_parse(self, status: int, headers: CIMultiDictProxy[str], body: str, payload: Any) -> dict:
+    def do_parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: Any) -> dict:
         return {}
 
-    def parse(self, status: int, headers: CIMultiDictProxy[str], body: str, payload: Any) -> dict:
+    @classmethod
+    def parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: Any) -> dict:
         if 'content-type' not in headers:
-            return self.do_parse(status, headers, body, payload)
+            return cls.do_parse(status, headers, body, payload)
         else:
-            supported_content_types = self.content_type_supported() + [
-                f'{t}; charset={c}' for c, t in itertools.product(self.charset_supported(), self.content_type_supported())
+            supported_content_types = cls.content_type_supported() + [
+                f'{t}; charset={c}' for c, t in itertools.product(cls.charset_supported(), cls.content_type_supported())
             ]
             if headers['content-type'] in supported_content_types:
-                return self.do_parse(status, headers, body, payload)
+                return cls.do_parse(status, headers, body, payload)
             else:
-                logging.warning(f'Content-Type {headers["content-type"]} not supported by {self.name()}')
-                raise NotImplementedError(f"Content-Type {headers['content-type']} not supported by {self.name()}")
+                logging.warning(f'Content-Type {headers["content-type"]} not supported by {cls.name()}')
+                raise NotImplementedError(f"Content-Type {headers['content-type']} not supported by {cls.name()}")
 
 
 class RestfulJSONParser(RestfulParser):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
     @classmethod
     def content_type_supported(cls) -> list:
@@ -61,14 +56,16 @@ class RestfulJSONParser(RestfulParser):
     def charset_supported(cls) -> list:
         return ['utf-8']
 
+    @classmethod
     @abstractmethod
-    def parse_response(self, status: int, headers: CIMultiDictProxy[str], json_body: Any, payload: Any) -> dict:
+    def parse_response(cls, status: int, headers: CIMultiDictProxy[str], json_body: Any, payload: Any) -> dict:
         return {}
 
-    def do_parse(self, status: int, headers: CIMultiDictProxy[str], body: str, payload: Any) -> dict:
+    @classmethod
+    def do_parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: Any) -> dict:
         try:
             json_body = json.loads(body)
-            return self.parse_response(status, headers, json_body, payload)
+            return cls.parse_response(status, headers, json_body, payload)
         except json.JSONDecodeError:
             logging.warning(f'Failed to decode JSON: {body}')
             return {}
