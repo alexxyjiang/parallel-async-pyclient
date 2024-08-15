@@ -64,8 +64,8 @@ class RestfulJSONParser(RestfulParser):
     @classmethod
     def do_parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: Any) -> dict:
         try:
-            json_body = json.loads(body)
+            json_body = json.loads(body, strict=False)
             return cls.parse_response(status, headers, json_body, payload)
         except json.JSONDecodeError:
-            logging.warning(f'Failed to decode JSON: {body}')
+            logging.warning(f'Failed to decode JSON: {repr(body)}')
             return {}
