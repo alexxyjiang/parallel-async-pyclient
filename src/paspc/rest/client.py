@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # generic rest http asyncio client based on aiohttp
 import logging
-from typing import Any
 from aiohttp import ClientSession
 from .parser import RestfulParser
 
@@ -12,7 +11,7 @@ class RestfulClient(object):
         self.__client_session__ = client_session
         self.__client_parser__ = client_parser
 
-    async def request_parse(self, method: str, url: str, payload: Any, **kwargs) -> dict:
+    async def request_parse(self, method: str, url: str, payload: dict, **kwargs) -> dict:
         async with self.__client_session__.request(method, url, **kwargs) as response:
             status = response.status
             headers = response.headers
@@ -20,5 +19,7 @@ class RestfulClient(object):
             if status in self.__client_parser__.status_supported():
                 return self.__client_parser__.parse(status, headers, body, payload)
             else:
+                if 'verbose' in payload and payload['verbose']:
+                    logging.info(f'Request url {url} with payload {payload} and kwargs {kwargs}')
                 logging.warning(f'Status {status} not supported by {self.__client_parser__.name()}')
                 raise NotImplementedError(f"Status {status} not supported by {self.__client_parser__.name()}")

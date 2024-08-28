@@ -4,7 +4,6 @@ import itertools
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
 from aiohttp.typedefs import CIMultiDictProxy
 
 
@@ -28,11 +27,11 @@ class RestfulParser(ABC):
 
     @classmethod
     @abstractmethod
-    def do_parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: Any) -> dict:
+    def do_parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: dict) -> dict:
         return {}
 
     @classmethod
-    def parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: Any) -> dict:
+    def parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: dict) -> dict:
         if 'content-type' not in headers:
             return cls.do_parse(status, headers, body, payload)
         else:
@@ -58,11 +57,11 @@ class RestfulJSONParser(RestfulParser):
 
     @classmethod
     @abstractmethod
-    def parse_response(cls, status: int, headers: CIMultiDictProxy[str], json_body: Any, payload: Any) -> dict:
+    def parse_response(cls, status: int, headers: CIMultiDictProxy[str], json_body: dict, payload: dict) -> dict:
         return {}
 
     @classmethod
-    def do_parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: Any) -> dict:
+    def do_parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: dict) -> dict:
         try:
             json_body = json.loads(body, strict=False)
             return cls.parse_response(status, headers, json_body, payload)
