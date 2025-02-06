@@ -12,14 +12,18 @@ class RestfulClient(object):
         self.__client_parser__ = client_parser
 
     async def request_parse(self, method: str, url: str, payload: dict, **kwargs) -> dict:
-        async with self.__client_session__.request(method, url, **kwargs) as response:
-            status = response.status
-            headers = response.headers
-            body = await response.text()
-            if status in self.__client_parser__.status_supported():
-                return self.__client_parser__.parse(status, headers, body, payload)
-            else:
+        try:
+            async with self.__client_session__.request(method, url, **kwargs) as response:
+                status = response.status
+                headers = response.headers
+                body = await response.text()
                 if 'verbose' in payload and payload['verbose']:
-                    logging.info(f'Request url {url} with payload {payload} and kwargs {kwargs}')
-                logging.warning(f'Status {status} not supported by {self.__client_parser__.name()}')
-                raise NotImplementedError(f"Status {status} not supported by {self.__client_parser__.name()}")
+                    logging.debug(f'Request url {url} with payload {payload} and kwargs {kwargs}')
+                if status in self.__client_parser__.status_supported():
+                    return self.__client_parser__.parse(status, headers, body, payload)
+                else:
+                    logging.warning(f'Response of {url} with status {status} not supported by {self.__client_parser__.name()}')
+                    return self.__client_parser__.default_result()
+        except Exception as e:
+            logging.error(f'Error occurred while requesting {url} with payload {payload} and kwargs {kwargs}: {str(e)}')
+            return self.__client_parser__.default_result()

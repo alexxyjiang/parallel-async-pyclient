@@ -3,7 +3,7 @@
 import itertools
 import json
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from aiohttp.typedefs import CIMultiDictProxy
 
 
@@ -26,23 +26,23 @@ class RestfulParser(ABC):
         return []
 
     @classmethod
-    @abstractmethod
-    def do_parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: dict) -> dict:
+    def default_result(cls) -> dict:
         return {}
 
     @classmethod
+    def do_parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: dict) -> dict:
+        return cls.default_result()
+
+    @classmethod
     def parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: dict) -> dict:
-        if 'content-type' not in headers:
-            return cls.do_parse(status, headers, body, payload)
-        else:
+        if 'content-type' in headers:
             supported_content_types = cls.content_type_supported() + [
                 f'{t}; charset={c}' for c, t in itertools.product(cls.charset_supported(), cls.content_type_supported())
             ]
-            if headers['content-type'] in supported_content_types:
-                return cls.do_parse(status, headers, body, payload)
-            else:
+            if headers['content-type'] not in supported_content_types:
                 logging.warning(f'Content-Type {headers["content-type"]} not supported by {cls.name()}')
-                raise NotImplementedError(f"Content-Type {headers['content-type']} not supported by {cls.name()}")
+                return cls.default_result()
+        return cls.do_parse(status, headers, body, payload)
 
 
 class RestfulJSONParser(RestfulParser):
@@ -56,9 +56,8 @@ class RestfulJSONParser(RestfulParser):
         return ['utf-8']
 
     @classmethod
-    @abstractmethod
     def parse_response(cls, status: int, headers: CIMultiDictProxy[str], json_body: dict, payload: dict) -> dict:
-        return {}
+        return cls.default_result()
 
     @classmethod
     def do_parse(cls, status: int, headers: CIMultiDictProxy[str], body: str, payload: dict) -> dict:
@@ -66,5 +65,6 @@ class RestfulJSONParser(RestfulParser):
             json_body = json.loads(body, strict=False)
             return cls.parse_response(status, headers, json_body, payload)
         except json.JSONDecodeError:
-            logging.warning(f'Failed to decode JSON: {repr(body)}')
-            return {}
+            if 'verbose' in payload and payload['verbose']:
+                logging.debug(f'Failed to decode JSON: {repr(body)}')
+            return cls.default_result()
