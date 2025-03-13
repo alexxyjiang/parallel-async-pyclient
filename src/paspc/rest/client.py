@@ -11,6 +11,9 @@ class RestfulClient(object):
         self.__client_session__ = client_session
         self.__client_parser__ = client_parser
 
+    def get_parser(self) -> RestfulParser:
+        return self.__client_parser__
+
     async def request_parse(self, method: str, url: str, payload: dict, **kwargs) -> dict:
         try:
             async with self.__client_session__.request(method, url, **kwargs) as response:
