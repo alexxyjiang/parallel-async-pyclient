@@ -24,4 +24,4 @@ class BasicJsonRequest(JsonRequest):
         return self.__inner_object__
 
     def to_plain_text(self) -> str:
-        return json.dumps(self.__inner_object__, ensure_ascii=False, indent=2)
+        return json.dumps(self.__inner_object__)
